@@ -1,0 +1,118 @@
+/* 温馨暖色调风格色彩系统 */
+:root {
+  /* 主色调 - 纯净的白色系 */
+  --color-primary: #FFFFFF;
+  --color-primary-soft: #FEFEFE;
+  --color-primary-mute: #FDFDFD;
+  
+  /* 强调色 - 非常浅的暖色调 */
+  --color-accent-warm: #FEF3C7;
+  --color-accent-light-warm: #FEF7E0;
+  --color-accent-pale-warm: #FEF9E7;
+  --color-accent-peach: #FED7AA;
+  --color-accent-rose: #FECACA;
+  --color-accent-cream: #FEF2F2;
+  
+  /* 文字颜色 - 柔和的暖色系 */
+  --color-text-primary: #374151;
+  --color-text-secondary: #6B7280;
+  --color-text-muted: #9CA3AF;
+  
+  /* 背景色 */
+  --color-background: var(--color-primary);
+  --color-background-soft: var(--color-primary-soft);
+  --color-background-mute: var(--color-primary-mute);
+  
+  /* 边框色 - 非常浅的暖色边框 */
+  --color-border: #F3F4F6;
+  --color-border-hover: var(--color-accent-warm);
+  
+  /* 标题色 */
+  --color-heading: var(--color-text-primary);
+  
+  /* 阴影 - 非常浅的暖色阴影 */
+  --shadow-soft: 0 2px 8px rgba(254, 243, 199, 0.3);
+  --shadow-medium: 0 4px 16px rgba(254, 243, 199, 0.4);
+  --shadow-strong: 0 8px 32px rgba(254, 243, 199, 0.5);
+  
+  /* 圆角 */
+  --radius-small: 8px;
+  --radius-medium: 12px;
+  --radius-large: 16px;
+  --radius-xl: 20px;
+  
+  /* 间距 - 增加更宽松的间距 */
+  --spacing-xs: 0.5rem;
+  --spacing-sm: 0.75rem;
+  --spacing-md: 1.5rem;
+  --spacing-lg: 2rem;
+  --spacing-xl: 3rem;
+  --spacing-2xl: 4rem;
+  --spacing-3xl: 5rem;
+  
+  /* 字体大小 */
+  --text-xs: 0.625rem;
+  --text-sm: 0.75rem;
+  --text-base: 0.875rem;
+  --text-lg: 1rem;
+  --text-xl: 1.125rem;
+  --text-2xl: 1.25rem;
+  --text-3xl: 1.5rem;
+  --text-4xl: 2rem;
+  
+  /* 过渡动画 */
+  --transition-fast: 0.2s ease;
+  --transition-normal: 0.3s ease;
+  --transition-slow: 0.5s ease;
+}
+
+/* 暗色模式 - 深暖色调 */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* 暗色模式下的深暖色调 */
+    --color-primary: #1F2937;
+    --color-primary-soft: #374151;
+    --color-primary-mute: #4B5563;
+    
+    --color-text-primary: #F9FAFB;
+    --color-text-secondary: #D1D5DB;
+    --color-text-muted: #9CA3AF;
+    
+    --color-background: var(--color-primary);
+    --color-background-soft: var(--color-primary-soft);
+    --color-background-mute: var(--color-primary-mute);
+    
+    --color-border: #6B7280;
+    --color-border-hover: var(--color-accent-warm);
+    
+    --color-heading: var(--color-text-primary);
+    
+    --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.4);
+    --shadow-strong: 0 8px 32px rgba(0, 0, 0, 0.5);
+  }
+}
+
+/* 手动暗色模式切换 */
+:root[class*="dark"] {
+  --color-primary: #1F2937;
+  --color-primary-soft: #374151;
+  --color-primary-mute: #4B5563;
+  
+  --color-text-primary: #F9FAFB;
+  --color-text-secondary: #D1D5DB;
+  --color-text-muted: #9CA3AF;
+  
+  --color-background: var(--color-primary);
+  --color-background-soft: var(--color-primary-soft);
+  --color-background-mute: var(--color-primary-mute);
+  
+  --color-border: #6B7280;
+  --color-border-hover: var(--color-accent-warm);
+  
+  --color-heading: var(--color-text-primary);
+  
+  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-strong: 0 8px 32px rgba(0, 0, 0, 0.5);
+} 

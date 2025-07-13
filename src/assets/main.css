@@ -1,0 +1,103 @@
+@import './base.css';
+@import './variables.css';
+
+#app {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0;
+  font-weight: normal;
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  min-height: 100vh;
+}
+
+a,
+.green {
+  text-decoration: none;
+  color: var(--color-accent-green);
+  transition: var(--transition-normal);
+  padding: 3px;
+}
+
+@media (hover: hover) {
+  a:hover {
+    background-color: rgba(254, 243, 199, 0.3);
+  }
+}
+
+/* 移除拥挤的网格布局 */
+@media (min-width: 1024px) {
+  body {
+    display: block;
+  }
+
+  #app {
+    display: block;
+    padding: 0;
+  }
+}
+
+/* 全局温馨家庭风样式 */
+body {
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  line-height: 1.6;
+  transition: var(--transition-slow);
+  margin: 0;
+  padding: 0;
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-background-mute);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-accent-warm);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-accent-peach);
+}
+
+/* 选择文本样式 */
+::selection {
+  background: var(--color-accent-pale-warm);
+  color: var(--color-text-primary);
+}
+
+/* 焦点样式 */
+:focus {
+  outline: 2px solid var(--color-accent-warm);
+  outline-offset: 2px;
+}
+
+/* 按钮基础样式 */
+button {
+  font-family: inherit;
+  cursor: pointer;
+  transition: var(--transition-normal);
+}
+
+/* 输入框基础样式 */
+input, textarea, select {
+  font-family: inherit;
+  transition: var(--transition-normal);
+}
+
+/* 链接基础样式 */
+a {
+  color: var(--color-accent-warm);
+  text-decoration: none;
+  transition: var(--transition-normal);
+}
+
+a:hover {
+  color: var(--color-accent-peach);
+}
