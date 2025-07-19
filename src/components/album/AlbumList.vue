@@ -6,12 +6,22 @@
         <h2>我的相册</h2>
         <span class="album-count">{{ displayedAlbumCount }} 个相册</span>
       </div>
-      <button @click="showCreateForm = true" class="create-btn">
-        <svg viewBox="0 0 24 24" fill="currentColor">
-          <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-        </svg>
-        创建相册
-      </button>
+      <div class="album-controls">
+        <label class="favorite-filter">
+          <input 
+            type="checkbox" 
+            v-model="albumStore.showFavoritesOnly" 
+            @change="handleFavoriteFilterChange"
+          />
+          <span class="checkbox-label">仅显示收藏</span>
+        </label>
+        <button @click="showCreateForm = true" class="create-btn">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+          </svg>
+          创建相册
+        </button>
+      </div>
     </div>
 
     <!-- 标签筛选 -->
@@ -28,6 +38,7 @@
         :album="album"
         @click="selectAlbum(album)"
         @delete="deleteAlbum(album)"
+        @favorite="handleAlbumFavorite(album.id)"
       />
     </div>
 
@@ -146,6 +157,14 @@ const clearFilters = () => {
   albumStore.clearSelectedTags()
 }
 
+const handleFavoriteFilterChange = () => {
+  // 收藏过滤状态已通过v-model自动更新
+}
+
+const handleAlbumFavorite = (albumId) => {
+  albumStore.toggleAlbumFavorite(albumId)
+}
+
 // 生命周期
 onMounted(() => {
   loadAlbums()
@@ -183,6 +202,31 @@ onMounted(() => {
   font-size: 0.875rem;
   color: var(--color-text);
   opacity: 0.7;
+}
+
+.album-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.favorite-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.favorite-filter input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.checkbox-label {
+  font-size: 0.875rem;
+  color: var(--color-text);
+  user-select: none;
 }
 
 .create-btn {

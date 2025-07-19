@@ -17,6 +17,16 @@
       <!-- 操作按钮 -->
       <div class="album-actions">
         <button 
+          @click.stop="$emit('favorite')" 
+          class="action-btn favorite-btn"
+          :class="{ active: album.isFavored }"
+          title="收藏相册"
+        >
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+          </svg>
+        </button>
+        <button 
           @click.stop="$emit('delete')" 
           class="action-btn delete-btn"
           title="删除相册"
@@ -78,7 +88,7 @@ const props = defineProps({
   }
 })
 
-defineEmits(['click', 'delete'])
+defineEmits(['click', 'delete', 'favorite'])
 
 const tagStore = useTagStore()
 
@@ -238,6 +248,22 @@ onMounted(() => {
 
 .delete-btn:hover {
   color: #F44336;
+}
+
+.favorite-btn {
+  color: #666;
+}
+
+.favorite-btn:hover {
+  color: #E91E63;
+}
+
+.favorite-btn.active {
+  color: #E91E63;
+}
+
+.favorite-btn.active:hover {
+  color: #C2185B;
 }
 
 .action-btn svg {

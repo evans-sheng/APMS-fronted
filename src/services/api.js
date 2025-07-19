@@ -194,6 +194,18 @@ export class AlbumApiService {
     const response = await api.get(`/albums/${albumId}/photos`, { params })
     return response.data
   }
+
+  // 收藏相册
+  static async addAlbumFavorite(albumId) {
+    const response = await api.post(`/album/favorite/${albumId}`)
+    return response.data
+  }
+
+  // 取消收藏相册
+  static async removeAlbumFavorite(albumId) {
+    const response = await api.delete(`/album/favorite/${albumId}`)
+    return response.data
+  }
 }
 
 // 标签API服务
