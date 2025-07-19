@@ -27,7 +27,7 @@
         <button 
           @click.stop="$emit('favorite')" 
           class="action-btn favorite-btn"
-          :class="{ active: photo.isFavorite }"
+          :class="{ active: photo.isFavored }"
           title="收藏"
         >
           <svg viewBox="0 0 24 24" fill="currentColor">

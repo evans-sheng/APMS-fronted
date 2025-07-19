@@ -107,11 +107,19 @@ const nextPhoto = () => {
 };
 
 const handlePhotoFavorite = async (photo) => {
+  const photoIndex = filesList.value.findIndex(p => p.id === photo.id)
+  
   try {
     console.log('切换照片收藏状态:', photo)
     
-    // 调用后端接口
-    if (photo.isFavorite) {
+    // 立即更新UI状态，提供即时反馈
+    if (photoIndex !== -1) {
+      const newFavoriteState = !photo.isFavored
+      filesList.value[photoIndex].isFavored = newFavoriteState
+    }
+    
+    // 异步调用后端接口
+    if (photo.isFavored) {
       await FileApiService.unfavoritePhoto(photo.id)
       console.log('取消收藏成功')
     } else {
@@ -119,17 +127,16 @@ const handlePhotoFavorite = async (photo) => {
       console.log('收藏成功')
     }
     
-    // 成功后更新本地列表中的状态
-    const photoIndex = filesList.value.findIndex(p => p.id === photo.id)
-    if (photoIndex !== -1) {
-      filesList.value[photoIndex].isFavorite = !photo.isFavorite
-    }
-    
   } catch (error) {
     console.error('收藏操作失败:', error)
     
+    // 如果API调用失败，回滚UI状态
+    if (photoIndex !== -1) {
+      filesList.value[photoIndex].isFavored = photo.isFavored
+    }
+    
     // 显示用户友好的错误提示
-    const operation = photo.isFavorite ? '取消收藏' : '收藏'
+    const operation = !photo.isFavored ? '取消收藏' : '收藏'
     const errorMessage = error.response?.data?.message || error.message || '网络错误'
     alert(`${operation}失败：${errorMessage}`)
   }

@@ -32,6 +32,54 @@
         </div>
       </div>
 
+      <!-- 筛选区域 -->
+      <div class="filters-section">
+        <div class="filter-group">
+          <div class="tag-filter">
+            <div class="tag-input-container">
+              <input 
+                type="text" 
+                placeholder="输入标签名称搜索..." 
+                class="tag-search-input"
+                v-model="tagSearchQuery"
+                @focus="showTagDropdown = true"
+                @blur="handleTagInputBlur"
+              />
+              <div v-if="showTagDropdown && filteredAvailableTags.length > 0" class="tag-dropdown">
+                <div 
+                  v-for="tag in filteredAvailableTags" 
+                  :key="tag.id"
+                  class="tag-option"
+                  @mousedown="selectTag(tag)"
+                >
+                  <span class="tag-name">{{ tag.name }}</span>
+                  <span class="tag-color" :style="{ backgroundColor: tag.color }"></span>
+                </div>
+              </div>
+            </div>
+            <div v-if="selectedTags.length > 0" class="selected-tags">
+              <span 
+                v-for="tag in selectedTags" 
+                :key="tag.id"
+                class="selected-tag"
+                :style="{ backgroundColor: tag.color }"
+              >
+                {{ tag.name }}
+                <button @click="removeTag(tag)" class="remove-tag-btn">×</button>
+              </span>
+            </div>
+          </div>
+          <label class="favorites-filter">
+            <input 
+              type="checkbox" 
+              v-model="showFavoritesOnly"
+              @change="handleFavoritesFilter"
+            />
+            <span class="checkbox-label">收藏</span>
+          </label>
+        </div>
+      </div>
+
       <!-- 照片网格 -->
       <div v-if="photos.length > 0" class="photos-section">
         <PhotoGrid 
@@ -119,6 +167,10 @@ const showLightbox = ref(false)
 const showUploadForm = ref(false)
 const showEditForm = ref(false)
 const currentPhotoIndex = ref(0)
+const showFavoritesOnly = ref(false)
+const selectedTags = ref([])
+const tagSearchQuery = ref('')
+const showTagDropdown = ref(false)
 
 // 在组件中使用
 const tagStore = useTagStore()
@@ -145,6 +197,22 @@ const currentPhoto = computed(() => {
     return photos.value[currentPhotoIndex.value]
   }
   return null
+})
+
+// 过滤可用标签（排除已选择的标签）
+const filteredAvailableTags = computed(() => {
+  const availableTags = tagStore.tags.filter(tag => 
+    !selectedTags.value.some(selected => selected.id === tag.id)
+  )
+  
+  if (!tagSearchQuery.value.trim()) {
+    return availableTags
+  }
+  
+  const query = tagSearchQuery.value.toLowerCase()
+  return availableTags.filter(tag => 
+    tag.name.toLowerCase().includes(query)
+  )
 })
 
 // 方法
@@ -264,13 +332,57 @@ const handlePhotoDeleted = (deletedPhoto) => {
   }
 }
 
+// 处理收藏筛选
+const handleFavoritesFilter = () => {
+  photoStore.setFilters({ 
+    showFavoritesOnly: showFavoritesOnly.value,
+    tags: selectedTags.value.map(tag => tag.name)
+  })
+}
+
+// 处理标签选择
+const selectTag = (tag) => {
+  if (!selectedTags.value.some(selected => selected.id === tag.id)) {
+    selectedTags.value.push(tag)
+    updateTagFilters()
+  }
+  tagSearchQuery.value = ''
+  showTagDropdown.value = false
+}
+
+// 移除标签
+const removeTag = (tagToRemove) => {
+  selectedTags.value = selectedTags.value.filter(tag => tag.id !== tagToRemove.id)
+  updateTagFilters()
+}
+
+// 更新标签筛选
+const updateTagFilters = () => {
+  photoStore.setFilters({
+    tags: selectedTags.value.map(tag => tag.name),
+    showFavoritesOnly: showFavoritesOnly.value
+  })
+}
+
+// 处理标签输入框失去焦点
+const handleTagInputBlur = () => {
+  // 延迟隐藏下拉框，以便点击事件能够正常触发
+  setTimeout(() => {
+    showTagDropdown.value = false
+  }, 200)
+}
+
 // 处理照片收藏
 const handlePhotoFavorite = async (photo) => {
   try {
     console.log('切换照片收藏状态:', photo)
     
-    // 调用后端接口
-    if (photo.isFavorite) {
+    // 立即更新UI状态，提供即时反馈
+    const newFavoriteState = !photo.isFavored
+    photoStore.setPhotoFavorite(photo.id, newFavoriteState)
+    
+    // 异步调用后端接口
+    if (photo.isFavored) {
       await FileApiService.unfavoritePhoto(photo.id)
       console.log('取消收藏成功')
     } else {
@@ -278,14 +390,14 @@ const handlePhotoFavorite = async (photo) => {
       console.log('收藏成功')
     }
     
-    // 成功后更新内存状态
-    photoStore.updatePhoto(photo.id, { isFavorite: !photo.isFavorite })
-    
   } catch (error) {
     console.error('收藏操作失败:', error)
     
+    // 如果API调用失败，回滚UI状态
+    photoStore.setPhotoFavorite(photo.id, photo.isFavored)
+    
     // 显示用户友好的错误提示
-    const operation = photo.isFavorite ? '取消收藏' : '收藏'
+    const operation = !photo.isFavored ? '取消收藏' : '收藏'
     const errorMessage = error.response?.data?.message || error.message || '网络错误'
     alert(`${operation}失败：${errorMessage}`)
   }
@@ -340,8 +452,10 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: var(--spacing-xl);
+  /* margin-bottom: var(--spacing-xl); */
   padding-bottom: var(--spacing-xl);
+  margin-bottom: 0;
+  /* padding-bottom: 0; */
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -419,6 +533,153 @@ onMounted(() => {
   height: 18px;
 }
 
+.filters-section {
+  margin: 0 0 var(--spacing-lg) 0;
+  padding: var(--spacing-md);
+  background: var(--color-background-mute);
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+}
+
+.filter-group {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-lg);
+}
+
+.filter-group > .favorites-filter {
+  margin-top: 0.75rem;
+  margin-left: auto;
+}
+
+.tag-filter {
+  flex: 0 1 300px;
+  max-width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.tag-input-container {
+  position: relative;
+}
+
+.tag-search-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  background: var(--color-background);
+  color: var(--color-text);
+  transition: border-color 0.3s ease;
+}
+
+.tag-search-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.tag-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+.tag-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.tag-option:hover {
+  background: var(--color-background-mute);
+}
+
+.tag-name {
+  font-size: 0.875rem;
+  color: var(--color-text);
+}
+
+.tag-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+}
+
+.selected-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.selected-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.remove-tag-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 0.25rem;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s ease;
+}
+
+.remove-tag-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.favorites-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.favorites-filter input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.checkbox-label {
+  font-size: 0.875rem;
+  color: var(--color-text);
+  font-weight: 500;
+}
+
 .photos-section {
   margin-top: var(--spacing-xl);
 }
@@ -445,6 +706,29 @@ onMounted(() => {
   .action-btn {
     flex: 1;
     justify-content: center;
+  }
+  
+  .filter-group {
+    flex-direction: column;
+    gap: var(--spacing-md);
+    align-items: stretch;
+  }
+  
+  .tag-filter {
+    width: 100%;
+  }
+  
+  .tag-search-input {
+    width: 100%;
+  }
+  
+  .selected-tags {
+    justify-content: flex-start;
+  }
+  
+  .favorites-filter {
+    align-self: flex-start;
+    margin-top: var(--spacing-sm);
   }
 }
 </style> 

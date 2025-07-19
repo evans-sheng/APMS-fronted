@@ -11,12 +11,20 @@ export const usePhotoStore = defineStore('photo', () => {
   const filters = ref({
     tags: [],
     dateRange: null,
-    search: ''
+    search: '',
+    showFavoritesOnly: false
   })
 
   // 计算属性
   const photoCount = computed(() => photos.value.length)
   const selectedCount = computed(() => selectedPhotos.value.length)
+  
+  const favoritePhotos = computed(() => {
+    if (!Array.isArray(photos.value)) {
+      return []
+    }
+    return photos.value.filter(photo => photo.isFavored === true)
+  })
   
   const filteredPhotos = computed(() => {
     // 防御性编程：确保 photos.value 是数组
@@ -51,6 +59,11 @@ export const usePhotoStore = defineStore('photo', () => {
         const photoDate = new Date(photo.createdAt)
         return (!start || photoDate >= start) && (!end || photoDate <= end)
       })
+    }
+    
+    // 收藏筛选
+    if (filters.value.showFavoritesOnly) {
+      filtered = filtered.filter(photo => photo.isFavored === true)
     }
     
     return filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
@@ -124,7 +137,8 @@ export const usePhotoStore = defineStore('photo', () => {
     filters.value = {
       tags: [],
       dateRange: null,
-      search: ''
+      search: '',
+      showFavoritesOnly: false
     }
   }
 
@@ -140,6 +154,37 @@ export const usePhotoStore = defineStore('photo', () => {
     error.value = null
   }
 
+  // 收藏相关方法
+  const toggleFavorite = async (photoId) => {
+    try {
+      const photo = photos.value.find(p => p.id === photoId)
+      if (!photo) {
+        console.error('Photo not found:', photoId)
+        return
+      }
+
+      const { FileApiService } = await import('@/services/api')
+      
+      if (photo.isFavored) {
+        await FileApiService.unfavoritePhoto(photoId)
+        setPhotoFavorite(photoId, false)
+      } else {
+        await FileApiService.favoritePhoto(photoId)
+        setPhotoFavorite(photoId, true)
+      }
+    } catch (error) {
+      console.error('Toggle favorite failed:', error)
+      setError('收藏操作失败')
+    }
+  }
+
+  const setPhotoFavorite = (photoId, isFavored) => {
+    const index = photos.value.findIndex(photo => photo.id === photoId)
+    if (index !== -1) {
+      photos.value[index] = { ...photos.value[index], isFavored }
+    }
+  }
+
   return {
     // 状态
     photos,
@@ -151,6 +196,7 @@ export const usePhotoStore = defineStore('photo', () => {
     // 计算属性
     photoCount,
     selectedCount,
+    favoritePhotos,
     filteredPhotos,
     // 方法
     setPhotos,
@@ -168,6 +214,9 @@ export const usePhotoStore = defineStore('photo', () => {
     clearFilters,
     setLoading,
     setError,
-    clearError
+    clearError,
+    // 收藏相关方法
+    toggleFavorite,
+    setPhotoFavorite
   }
 }) 
