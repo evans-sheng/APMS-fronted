@@ -24,6 +24,12 @@ const routes = [
     name: 'Upload',
     component: () => import('../views/Upload.vue'),
     meta: { title: '上传照片' }
+  },
+  {
+    path: '/search/:query',
+    name: 'Search',
+    component: () => import('../views/SearchDetail.vue'),
+    meta: { title: '搜索结果' }
   }
 ]
 

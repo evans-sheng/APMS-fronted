@@ -7,6 +7,7 @@ export const useAlbumStore = defineStore('album', () => {
   const currentAlbum = ref(null)
   const loading = ref(false)
   const error = ref(null)
+  const selectedTags = ref([])
 
   // 计算属性
   const albumCount = computed(() => albums.value.length)
@@ -20,6 +21,30 @@ export const useAlbumStore = defineStore('album', () => {
       return new Date(b.updatedAt) - new Date(a.updatedAt)
     })
   })
+
+  // 过滤后的相册
+  const filteredAlbums = computed(() => {
+    let filtered = sortedAlbums.value
+    
+    // 标签筛选 - 支持多选
+    if (selectedTags.value.length > 0) {
+      filtered = filtered.filter(album => {
+        // 如果相册没有标签，则不显示
+        if (!album.tags || album.tags.length === 0) {
+          return false
+        }
+        // 检查相册是否包含任一选中的标签
+        return selectedTags.value.some(selectedTag => 
+          album.tags.includes(selectedTag)
+        )
+      })
+    }
+    
+    return filtered
+  })
+
+  // 过滤后的相册数量
+  const filteredAlbumCount = computed(() => filteredAlbums.value.length)
 
   // 方法
   const setAlbums = (albumList) => {
@@ -60,15 +85,40 @@ export const useAlbumStore = defineStore('album', () => {
     error.value = null
   }
 
+  // 标签筛选相关方法
+  const setSelectedTags = (tags) => {
+    selectedTags.value = tags
+  }
+
+  const addSelectedTag = (tag) => {
+    if (!selectedTags.value.includes(tag)) {
+      selectedTags.value.push(tag)
+    }
+  }
+
+  const removeSelectedTag = (tag) => {
+    const index = selectedTags.value.indexOf(tag)
+    if (index !== -1) {
+      selectedTags.value.splice(index, 1)
+    }
+  }
+
+  const clearSelectedTags = () => {
+    selectedTags.value = []
+  }
+
   return {
     // 状态
     albums,
     currentAlbum,
     loading,
     error,
+    selectedTags,
     // 计算属性
     albumCount,
     sortedAlbums,
+    filteredAlbums,
+    filteredAlbumCount,
     // 方法
     setAlbums,
     addAlbum,
@@ -77,6 +127,10 @@ export const useAlbumStore = defineStore('album', () => {
     setCurrentAlbum,
     setLoading,
     setError,
-    clearError
+    clearError,
+    setSelectedTags,
+    addSelectedTag,
+    removeSelectedTag,
+    clearSelectedTags
   }
 }) 

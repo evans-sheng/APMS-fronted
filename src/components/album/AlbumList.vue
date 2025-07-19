@@ -4,7 +4,7 @@
     <div class="album-header">
       <div class="album-title">
         <h2>我的相册</h2>
-        <span class="album-count">{{ albumCount }} 个相册</span>
+        <span class="album-count">{{ displayedAlbumCount }} 个相册</span>
       </div>
       <button @click="showCreateForm = true" class="create-btn">
         <svg viewBox="0 0 24 24" fill="currentColor">
@@ -14,13 +14,16 @@
       </button>
     </div>
 
+    <!-- 标签筛选 -->
+    <AlbumTagFilter />
+
     <!-- 加载状态 -->
     <Loading v-if="loading" text="加载相册中..." />
 
     <!-- 相册网格 -->
-    <div v-else-if="albums.length > 0" class="album-grid">
+    <div v-else-if="displayedAlbums.length > 0" class="album-grid">
       <AlbumCard 
-        v-for="album in albums" 
+        v-for="album in displayedAlbums" 
         :key="album.id" 
         :album="album"
         @click="selectAlbum(album)"
@@ -30,12 +33,22 @@
 
     <!-- 空状态 -->
     <EmptyState 
-      v-else 
+      v-else-if="selectedTags.length === 0"
       title="还没有相册"
       description="创建您的第一个相册，开始记录美好时光"
       icon="album"
       @action="showCreateForm = true"
       action-text="创建相册"
+    />
+
+    <!-- 筛选无结果状态 -->
+    <EmptyState 
+      v-else
+      title="没有找到匹配的相册"
+      description="尝试调整筛选条件或清除所有筛选"
+      icon="search"
+      @action="clearFilters"
+      action-text="清除筛选"
     />
 
     <!-- 创建相册表单 -->
@@ -54,6 +67,7 @@ import { useAlbumStore } from '@/stores/album'
 import { AlbumApiService } from '@/services/api'
 import AlbumCard from './AlbumCard.vue'
 import AlbumForm from './AlbumForm.vue'
+import AlbumTagFilter from './AlbumTagFilter.vue'
 import Loading from '../layout/Loading.vue'
 import EmptyState from '../common/EmptyState.vue'
 
@@ -63,8 +77,9 @@ const albumStore = useAlbumStore()
 const showCreateForm = ref(false)
 
 // 计算属性
-const albums = computed(() => albumStore.sortedAlbums)
-const albumCount = computed(() => albumStore.albumCount)
+const displayedAlbums = computed(() => albumStore.filteredAlbums)
+const displayedAlbumCount = computed(() => albumStore.filteredAlbumCount)
+const selectedTags = computed(() => albumStore.selectedTags)
 const loading = computed(() => albumStore.loading)
 
 // 方法
@@ -110,8 +125,6 @@ const selectAlbum = (album) => {
   router.push(`/album/${album.id}`)
 }
 
-
-
 const deleteAlbum = async (album) => {
   if (confirm(`确定要删除相册"${album.name}"吗？此操作不可恢复。`)) {
     try {
@@ -127,6 +140,10 @@ const deleteAlbum = async (album) => {
 const handleAlbumCreated = (newAlbum) => {
   albumStore.addAlbum(newAlbum)
   showCreateForm.value = false
+}
+
+const clearFilters = () => {
+  albumStore.clearSelectedTags()
 }
 
 // 生命周期

@@ -39,7 +39,7 @@
             type="text" 
             placeholder="搜索照片..." 
             v-model="searchQuery"
-            @input="handleSearch"
+            @keyup.enter="handleSearch"
             class="search-input"
           />
           <svg class="search-icon" viewBox="0 0 24 24" fill="currentColor">
@@ -73,6 +73,7 @@ const isDark = ref(false)
 const handleSearch = () => {
   // 这里可以触发搜索事件或跳转到搜索页面
   console.log('搜索:', searchQuery.value)
+  router.push(`/search/${searchQuery.value}`)
 }
 
 // 主题切换

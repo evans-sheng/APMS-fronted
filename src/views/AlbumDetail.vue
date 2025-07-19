@@ -92,7 +92,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAlbumStore } from '@/stores/album'
 import { usePhotoStore } from '@/stores/photo'
@@ -103,6 +103,9 @@ import PhotoUpload from '@/components/photo/PhotoUpload.vue'
 import AlbumForm from '@/components/album/AlbumForm.vue'
 import Loading from '@/components/layout/Loading.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import { TagApiService } from '@/services/api'
+import { useTagStore } from '@/stores/tag'
+import { FileApiService } from '@/services/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -117,8 +120,25 @@ const showUploadForm = ref(false)
 const showEditForm = ref(false)
 const currentPhotoIndex = ref(0)
 
+// 在组件中使用
+const tagStore = useTagStore()
+const loadTags = async () => {
+  try {
+    tagStore.setLoading(true)
+    const response = await TagApiService.getAllTags()
+    if (response.success) {
+      tagStore.setTags(response.data)
+    }
+  } catch (error) {
+    tagStore.setError(error.message)
+  } finally {
+    tagStore.setLoading(false)
+  }
+}
+
 // 计算属性
 const photos = computed(() => photoStore.filteredPhotos)
+console.log(photos.value)
 const photoCount = computed(() => photoStore.photoCount)
 const currentPhoto = computed(() => {
   if (currentPhotoIndex.value >= 0 && currentPhotoIndex.value < photos.value.length) {
@@ -245,15 +265,63 @@ const handlePhotoDeleted = (deletedPhoto) => {
 }
 
 // 处理照片收藏
-const handlePhotoFavorite = (photo) => {
-  console.log('切换照片收藏状态:', photo)
-  // 这里可以添加收藏功能的实现
-  photoStore.updatePhoto(photo.id, { isFavorite: !photo.isFavorite })
+const handlePhotoFavorite = async (photo) => {
+  try {
+    console.log('切换照片收藏状态:', photo)
+    
+    // 调用后端接口
+    if (photo.isFavorite) {
+      await FileApiService.unfavoritePhoto(photo.id)
+      console.log('取消收藏成功')
+    } else {
+      await FileApiService.favoritePhoto(photo.id)
+      console.log('收藏成功')
+    }
+    
+    // 成功后更新内存状态
+    photoStore.updatePhoto(photo.id, { isFavorite: !photo.isFavorite })
+    
+  } catch (error) {
+    console.error('收藏操作失败:', error)
+    
+    // 显示用户友好的错误提示
+    const operation = photo.isFavorite ? '取消收藏' : '收藏'
+    const errorMessage = error.response?.data?.message || error.message || '网络错误'
+    alert(`${operation}失败：${errorMessage}`)
+  }
+}
+
+// 处理照片定位
+const scrollToPhoto = (photoId) => {
+  if (!photoId) return
+  
+  // 等待DOM更新后再滚动
+  nextTick(() => {
+    const photoElement = document.querySelector(`[data-photo-id="${photoId}"]`)
+    if (photoElement) {
+      photoElement.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+      })
+      // 添加高亮效果
+      photoElement.style.boxShadow = '0 0 0 3px var(--color-primary)'
+      setTimeout(() => {
+        photoElement.style.boxShadow = ''
+      }, 2000)
+    }
+  })
 }
 
 // 生命周期
 onMounted(() => {
-  loadAlbum()
+  loadAlbum().then(() => {
+    // 如果有photoId查询参数，滚动到对应图片
+    const photoId = route.query.photoId
+    if (photoId) {
+      scrollToPhoto(photoId)
+    }
+  })
+  loadTags()
 })
 </script>
 

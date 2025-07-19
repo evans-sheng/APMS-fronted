@@ -143,6 +143,18 @@ export class FileApiService {
   static getOriginalUrl(fileId) {
     return `${ConfigService.fileServerUrl}/getFile/${fileId}`
   }
+
+  // 收藏照片
+  static async favoritePhoto(fileId) {
+    const response = await api.post(`/favorite/${fileId}`)
+    return response.data
+  }
+
+  // 取消收藏照片
+  static async unfavoritePhoto(fileId) {
+    const response = await api.delete(`/favorite/${fileId}`)
+    return response.data
+  }
 }
 
 // 相册API服务
@@ -184,4 +196,13 @@ export class AlbumApiService {
   }
 }
 
-export default api 
+// 标签API服务
+export class TagApiService {
+  // 获取所有标签
+  static async getAllTags() {
+    const response = await api.get('/tags/all')
+    return response.data
+  }
+}
+
+export default api

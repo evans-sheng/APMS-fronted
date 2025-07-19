@@ -1,5 +1,5 @@
 <template>
-  <div class="photo-card" @click="$emit('click')">
+  <div class="photo-card" @click="$emit('click')" :data-photo-id="photo.id">
     <!-- 照片缩略图 -->
     <div class="photo-thumbnail">
       <img 
@@ -54,16 +54,17 @@
       </div>
       
       <!-- 标签 -->
-      <div v-if="photo.tags && photo.tags.length > 0" class="photo-tags">
+      <div v-if="tagsWithColors.length > 0" class="photo-tags">
         <span 
-          v-for="tag in photo.tags.slice(0, 2)" 
-          :key="tag" 
+          v-for="tag in tagsWithColors.slice(0, 2)" 
+          :key="tag.name" 
           class="tag"
+          :style="{ color: tag.color }"
         >
-          {{ tag }}
+          {{ tag.name }}
         </span>
-        <span v-if="photo.tags.length > 2" class="tag more">
-          +{{ photo.tags.length - 2 }}
+        <span v-if="tagsWithColors.length > 2" class="tag more">
+          +{{ tagsWithColors.length - 2 }}
         </span>
       </div>
     </div>
@@ -73,6 +74,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { FileApiService } from '@/services/api'
+import { useTagStore } from '@/stores/tag'
 
 const props = defineProps({
   photo: {
@@ -86,9 +88,22 @@ defineEmits(['click', 'favorite', 'delete'])
 const imageLoaded = ref(false)
 const imageError = ref(false)
 
+// Store 实例
+const tagStore = useTagStore()
+
 // 计算属性
 const thumbnailUrl = computed(() => {
   return FileApiService.getThumbnailUrl(props.photo.id)
+})
+
+const tagsWithColors = computed(() => {
+  if (!props.photo.tags || props.photo.tags.length === 0) {
+    return []
+  }
+  return props.photo.tags.map(tagName => {
+    const tagObj = tagStore.tags?.find(tag => tag.name === tagName)
+    return tagObj || { name: tagName, color: '#FEF3C7' } // 默认颜色
+  })
 })
 
 // 方法

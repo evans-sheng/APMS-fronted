@@ -157,8 +157,8 @@ onMounted(() => {
 /* 欢迎区域 */
 .welcome-section {
   background: url('/family.jpg');
-  background-size: 100% auto;
-  background-position: center 20%;
+  background-size: 100% 150%;
+  background-position: center 30%;
   background-repeat: no-repeat;
   background-color: #f8f9fa;
   border-radius: 20px;

@@ -11,62 +11,92 @@
       </div>
 
       <form @submit.prevent="handleSubmit" class="album-form">
-        <div class="form-group">
-          <label for="name">相册名称 *</label>
-          <input
-            id="name"
-            v-model="form.name"
-            type="text"
-            placeholder="输入相册名称"
-            required
-            class="form-input"
+        <div class="form-content">
+          <div class="form-group">
+            <label for="name">相册名称 *</label>
+            <input
+              id="name"
+              v-model="form.name"
+              type="text"
+              placeholder="输入相册名称"
+              required
+              class="form-input"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="description">相册描述</label>
+            <textarea
+              id="description"
+              v-model="form.description"
+              placeholder="描述这个相册的内容..."
+              rows="3"
+              class="form-textarea"
+            ></textarea>
+          </div>
+
+          <!-- 封面上传 -->
+          <CoverUpload
+            v-model="form.coverImageId"
+            :existing-cover-url="existingCoverUrl"
+            @uploaded="onCoverUploaded"
+            @removed="onCoverRemoved"
           />
-        </div>
 
-        <div class="form-group">
-          <label for="description">相册描述</label>
-          <textarea
-            id="description"
-            v-model="form.description"
-            placeholder="描述这个相册的内容..."
-            rows="3"
-            class="form-textarea"
-          ></textarea>
-        </div>
-
-        <!-- 封面上传 -->
-        <CoverUpload
-          v-model="form.coverImageId"
-          :existing-cover-url="existingCoverUrl"
-          @uploaded="onCoverUploaded"
-          @removed="onCoverRemoved"
-        />
-
-        <div class="form-group">
-          <label for="tags">标签</label>
-          <input
-            id="tags"
-            v-model="tagInput"
-            type="text"
-            placeholder="输入标签，用逗号分隔"
-            @keydown.enter.prevent="addTag"
-            class="form-input"
-          />
-          <div v-if="form.tags.length > 0" class="tags-list">
-            <span 
-              v-for="tag in form.tags" 
-              :key="tag" 
-              class="tag"
-            >
-              {{ tag }}
-              <button 
-                type="button" 
-                @click="removeTag(tag)"
-                class="tag-remove"
+          <div class="form-group">
+            <label for="tags">标签</label>
+            <div class="tag-selector">
+              <div class="tag-dropdown" :class="{ 'active': showDropdown }">
+                <div class="dropdown-trigger" @click="toggleDropdown">
+                  <span v-if="form.tags.length === 0" class="placeholder">选择标签</span>
+                  <span v-else class="selected-count">已选择 {{ form.tags.length }} 个标签</span>
+                  <svg class="dropdown-arrow" :class="{ 'rotated': showDropdown }" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
+                  </svg>
+                </div>
+                <div v-if="showDropdown" class="dropdown-menu">
+                  <div v-if="tagStore.loading" class="dropdown-loading">
+                    加载标签中...
+                  </div>
+                  <div v-else-if="availableTags.length === 0" class="dropdown-empty">
+                    暂无可用标签
+                  </div>
+                  <div v-else class="dropdown-options">
+                    <label 
+                      v-for="tag in availableTags" 
+                      :key="tag.id"
+                      class="dropdown-option"
+                    >
+                      <input 
+                        type="checkbox" 
+                        :value="tag.name"
+                        :checked="form.tags.includes(tag.name)"
+                        @change="toggleTag(tag.name)"
+                      />
+                      <span class="tag-color" :style="{ backgroundColor: tag.color }"></span>
+                      <span class="tag-name">{{ tag.name }}</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div v-if="form.tags.length > 0" class="tags-list">
+              <span 
+                v-for="tag in selectedTags" 
+                :key="tag.name" 
+                class="tag"
               >
-                ×
-              </button>
-            </span>
+                <span class="tag-color" :style="{ backgroundColor: tag.color }"></span>
+                <span class="tag-name">{{ tag.name }}</span>
+                <button 
+                  type="button" 
+                  @click="removeTag(tag.name)"
+                  class="tag-remove"
+                >
+                  ×
+                </button>
+              </span>
+            </div>
           </div>
         </div>
 
@@ -84,9 +114,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
-import { AlbumApiService, FileApiService } from '@/services/api'
+import { ref, reactive, onMounted, computed, onUnmounted } from 'vue'
+import { AlbumApiService, FileApiService, TagApiService } from '@/services/api'
 import CoverUpload from './CoverUpload.vue'
+import { useTagStore } from '@/stores/tag'
 
 const props = defineProps({
   editingAlbum: {
@@ -98,7 +129,7 @@ const props = defineProps({
 const emit = defineEmits(['close', 'created', 'updated'])
 
 const submitting = ref(false)
-const tagInput = ref('')
+const showDropdown = ref(false)
 
 const form = reactive({
   name: '',
@@ -107,6 +138,8 @@ const form = reactive({
   coverImageId: null
 })
 
+const tagStore = useTagStore()
+
 // 计算现有封面URL
 const existingCoverUrl = computed(() => {
   if (props.editingAlbum && (props.editingAlbum.coverPhotoId || props.editingAlbum.coverImageId)) {
@@ -114,6 +147,34 @@ const existingCoverUrl = computed(() => {
   }
   return null
 })
+
+// 计算可用标签
+const availableTags = computed(() => {
+  return tagStore.tags || []
+})
+
+// 计算选中的标签对象（包含颜色信息）
+const selectedTags = computed(() => {
+  return form.tags.map(tagName => {
+    const tagObj = availableTags.value.find(tag => tag.name === tagName)
+    return tagObj || { name: tagName, color: '#9CA3AF' } // 默认颜色
+  })
+})
+
+// 加载标签
+const loadTags = async () => {
+  try {
+    tagStore.setLoading(true)
+    const response = await TagApiService.getAllTags()
+    if (response.success) {
+      tagStore.setTags(response.data)
+    }
+  } catch (error) {
+    tagStore.setError(error.message)
+  } finally {
+    tagStore.setLoading(false)
+  }
+}
 
 // 初始化表单
 onMounted(() => {
@@ -124,14 +185,38 @@ onMounted(() => {
     // 优先使用coverPhotoId，如果没有则使用coverImageId
     form.coverImageId = props.editingAlbum.coverPhotoId || props.editingAlbum.coverImageId || null
   }
+  
+  // 加载标签数据
+  loadTags()
+  
+  // 点击外部关闭下拉菜单
+  document.addEventListener('click', handleClickOutside)
 })
 
-// 添加标签
-const addTag = () => {
-  const tag = tagInput.value.trim()
-  if (tag && !form.tags.includes(tag)) {
-    form.tags.push(tag)
-    tagInput.value = ''
+// 点击外部关闭下拉菜单
+const handleClickOutside = (event) => {
+  if (!event.target.closest('.tag-dropdown')) {
+    showDropdown.value = false
+  }
+}
+
+// 组件卸载时清理事件监听
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
+
+// 切换下拉菜单
+const toggleDropdown = () => {
+  showDropdown.value = !showDropdown.value
+}
+
+// 切换标签选中状态
+const toggleTag = (tagName) => {
+  const index = form.tags.indexOf(tagName)
+  if (index > -1) {
+    form.tags.splice(index, 1)
+  } else {
+    form.tags.push(tagName)
   }
 }
 
@@ -231,7 +316,8 @@ const handleSubmit = async () => {
   width: 100%;
   max-width: 500px;
   max-height: 90vh;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .modal-header {
@@ -275,6 +361,16 @@ const handleSubmit = async () => {
 
 .album-form {
   padding: 1.5rem;
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-content {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 1rem;
 }
 
 .form-group {
@@ -314,23 +410,180 @@ const handleSubmit = async () => {
   min-height: 80px;
 }
 
+.tag-selector {
+  position: relative;
+  width: 100%;
+}
+
+.tag-dropdown {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-background);
+  color: var(--color-text);
+  font-size: 0.875rem;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+}
+
+.tag-dropdown.active {
+  border-color: var(--color-border-hover);
+  box-shadow: 0 0 0 3px rgba(254, 243, 199, 0.3);
+}
+
+.dropdown-trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-grow: 1;
+}
+
+.placeholder {
+  color: var(--color-text-mute);
+}
+
+.selected-count {
+  color: var(--color-text-mute);
+  font-size: 0.875rem;
+}
+
+.dropdown-arrow {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.3s ease;
+  flex-shrink: 0;
+}
+
+.dropdown-arrow.rotated {
+  transform: rotate(180deg);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  max-height: 200px;
+  overflow-y: auto;
+  margin-top: 0.5rem;
+}
+
+.dropdown-loading,
+.dropdown-empty {
+  padding: 0.75rem 1rem;
+  text-align: center;
+  color: var(--color-text-mute);
+  font-size: 0.875rem;
+}
+
+.dropdown-options {
+  padding: 0.5rem 0;
+}
+
+.dropdown-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dropdown-option:hover {
+  background: var(--color-background-mute);
+}
+
+.dropdown-option input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-primary); /* For better checkbox appearance */
+}
+
+.tag-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tag-name {
+  flex-grow: 1;
+  font-size: 0.875rem;
+  color: var(--color-text);
+}
+
 .tags-list {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   margin-top: 0.5rem;
+  max-height: 120px;
+  overflow-y: auto;
+  padding: 0.25rem;
+  border-radius: 8px;
+  background: var(--color-background-soft);
+}
+
+.tags-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.tags-list::-webkit-scrollbar-track {
+  background: var(--color-background-mute);
+  border-radius: 3px;
+}
+
+.tags-list::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+.tags-list::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-hover);
 }
 
 .tag {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
-  padding: 0.25rem 0.5rem;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
   background: var(--color-background-mute);
   color: var(--color-text);
   border-radius: 8px;
   font-size: 0.75rem;
   font-weight: 500;
+  border: 1px solid var(--color-border);
+  transition: all 0.2s ease;
+}
+
+.tag:hover {
+  background: var(--color-background-soft);
+  border-color: var(--color-border-hover);
+}
+
+.tag .tag-color {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.tag .tag-name {
+  flex-grow: 1;
+  font-size: 0.75rem;
+  color: var(--color-text);
 }
 
 .tag-remove {
@@ -356,7 +609,10 @@ const handleSubmit = async () => {
   display: flex;
   gap: 1rem;
   justify-content: flex-end;
-  margin-top: 2rem;
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+  flex-shrink: 0;
 }
 
 .btn-secondary,

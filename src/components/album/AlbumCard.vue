@@ -49,16 +49,17 @@
       </div>
 
       <!-- 标签 -->
-      <div v-if="album.tags && album.tags.length > 0" class="album-tags">
+      <div v-if="tagsWithColors.length > 0" class="album-tags">
         <span 
-          v-for="tag in album.tags.slice(0, 3)" 
-          :key="tag" 
+          v-for="tag in tagsWithColors.slice(0, 3)" 
+          :key="tag.name" 
           class="tag"
+          :style="{ color: tag.color }"
         >
-          {{ tag }}
+          {{ tag.name }}
         </span>
-        <span v-if="album.tags.length > 3" class="tag more">
-          +{{ album.tags.length - 3 }}
+        <span v-if="tagsWithColors.length > 3" class="tag more">
+          +{{ tagsWithColors.length - 3 }}
         </span>
       </div>
     </div>
@@ -66,8 +67,9 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { FileApiService } from '@/services/api'
+import { computed, onMounted } from 'vue'
+import { FileApiService, TagApiService } from '@/services/api'
+import { useTagStore } from '@/stores/tag'
 
 const props = defineProps({
   album: {
@@ -77,6 +79,8 @@ const props = defineProps({
 })
 
 defineEmits(['click', 'delete'])
+
+const tagStore = useTagStore()
 
 // 计算属性
 const coverImageUrl = computed(() => {
@@ -90,6 +94,35 @@ const coverImageUrl = computed(() => {
   }
   return null
 })
+
+// 计算带颜色的标签对象
+const tagsWithColors = computed(() => {
+  if (!props.album.tags || props.album.tags.length === 0) {
+    return []
+  }
+  
+  return props.album.tags.map(tagName => {
+    const tagObj = tagStore.getTagByName(tagName)
+    return tagObj || { name: tagName, color: '#FEF3C7' } // 默认颜色
+  })
+})
+
+// 加载标签数据
+const loadTags = async () => {
+  if (tagStore.tags.length === 0) {
+    try {
+      tagStore.setLoading(true)
+      const response = await TagApiService.getAllTags()
+      if (response.success) {
+        tagStore.setTags(response.data)
+      }
+    } catch (error) {
+      tagStore.setError(error.message)
+    } finally {
+      tagStore.setLoading(false)
+    }
+  }
+}
 
 // 方法
 const formatDate = (dateString) => {
@@ -111,6 +144,11 @@ const formatDate = (dateString) => {
     })
   }
 }
+
+// 生命周期
+onMounted(() => {
+  loadTags()
+})
 </script>
 
 <style scoped>
@@ -262,16 +300,22 @@ const formatDate = (dateString) => {
 
 .tag {
   padding: 0.25rem 0.5rem;
-  background: var(--color-background-mute);
-  color: var(--color-text);
   border-radius: 8px;
   font-size: 0.75rem;
   font-weight: 500;
+  color: rgba(55, 65, 81, 0.8); /* 深色文字确保在浅色背景上可读 */
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.tag:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .tag.more {
-  background: var(--color-border);
-  color: var(--color-text);
+  background: var(--color-border) !important;
+  color: var(--color-text) !important;
   opacity: 0.6;
 }
 
